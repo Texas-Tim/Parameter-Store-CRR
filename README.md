@@ -1,7 +1,7 @@
 # Parameter-Store-CRR
 Simple demo showing how to replicate parameter store items across regions for DR
 
-![Architecture Diagram](./images/ArchitectureDiagram.png)
+![Architecture Diagram](./Images/ArchitectureDiagram.png)
 
 
 # Prerequisites
@@ -42,4 +42,4 @@ Any Update or Create event in the Systems Manager Parameter Store, event must be
 
 1. Deleting the stack does not delete the parameters in the target region
 2. When syncing the initial parameters to the new region, it does not sync the values of those parameters. It simply copies over the parameter if it does not yet exist (checking the parameter name)
-3. 
+3.
