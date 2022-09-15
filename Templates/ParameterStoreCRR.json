@@ -1,0 +1,228 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "KMSKey": {
+            "Description": "KMS Key in target region",
+            "Type": "String",
+            "Default": "alias/SSMKey"
+        },
+        "DestinationRegion": {
+            "Description": "Destination Region for Target Parameter Store",
+            "Type": "String",
+            "Default": "us-east-2"
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "6ec60499-4737-4737-b862-4f0e27251dac": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "3d35b12a-ac3a-4329-aed1-6aaf56e5795c": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 170,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "4c0e8a34-217f-45de-b868-d2bfe4ad3396": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": -60
+                },
+                "z": 1,
+                "embeds": []
+            }
+        }
+    },
+    "Resources": {
+        "SSMCopyAllLambdainvoke": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "SSMCopyAllLambda",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": "SSMCopyAllLambda"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "4c0e8a34-217f-45de-b868-d2bfe4ad3396"
+                }
+            }
+        },
+        "SSMCopyAllLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Description": "Copy existing SSM Parameters to new Region",
+                "FunctionName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "LambdaCopyAll-",
+                            {
+                                "Ref": "AWS::StackName"
+                            }
+                        ]
+                    ]
+                },
+                "Handler": "index.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "AWSLambdaCopyAllRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 360,
+                "Runtime": "python3.9",
+                "Code": {
+                    "ZipFile": "import json\nimport boto3\nimport os\nimport cfnresponse\n\n#region of your default parameter store\ndefault_ssm = boto3.client('ssm')\n\n#region of your target DR parameter store\nregion = os.environ.get('REGION')\ntarget_ssm = boto3.client('ssm', region)\n\n#KMS key if applicable for your target parameters\nkey = os.environ.get('KEY')\n\ndef lambda_handler(event, context):\n  \"\"\"\n  Assumes a String Datatype!\n  \"\"\"\n  result = {}\n  parameters = default_ssm.describe_parameters()['Parameters']\n  try:\n      for p in parameters:\n          name = p['Name']\n          print(\"Copying Parameter: \", name)\n          secure = p['Type']\n\n          if secure == 'SecureString':\n              if len(target_ssm.describe_parameters(ParameterFilters=[{\"Key\": \"Name\", \"Values\":[name]}])['Parameters']) > 0:\n                  print(\"Parameter already exists, skipping Parameter: \", name)\n              else:\n                  parameter = default_ssm.get_parameter(Name=name, WithDecryption=True)['Parameter']['Value']\n                  result[name] = target_ssm.put_parameter(Name=name, Value=parameter, Type=secure, KeyId=key)\n                  print(\"Successfully copied parameter: \", name)\n          else:\n              if len(target_ssm.describe_parameters(ParameterFilters=[{\"Key\": \"Name\", \"Values\":[name]}])['Parameters']) > 0:\n                  print(\"Parameter already exists, skipping Parameter: \", name)\n              else:\n                  parameter = default_ssm.get_parameter(Name=name)['Parameter']['Value']\n                  result[name] = target_ssm.put_parameter(Name=name, Value=parameter, Type=secure)\n                  print(\"Successfully copied parameter: \", name)\n  except:\n      print(\"ERROR\")\n      result['Status'] = 'Failed'\n      # Respond to CloudFormation with a failure to process request\n      cfnresponse.send(event, context, cfnresponse.FAILED, result)\n      return result\n  result['Status'] = 'Success'\n  cfnresponse.send(event, context, cfnresponse.SUCCESS, result)\n  return result\n"
+                },
+                "Environment": {
+                    "Variables": {
+                        "KEY": {
+                            "Ref": "KMSKey"
+                        },
+                        "REGION": {
+                            "Ref": "DestinationRegion"
+                        }
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "6ec60499-4737-4737-b862-4f0e27251dac"
+                }
+            }
+        },
+        "AWSLambdaCopyAllRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Path": "/service-role/",
+                "Policies": [
+                    {
+                        "PolicyName": "AWSLambdaBasicExecutionRole",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "logs:CreateLogGroup",
+                                    "Resource": [
+                                        {
+                                            "Fn::Join": [
+                                                "",
+                                                [
+                                                    "arn:aws:logs:us-east-1:",
+                                                    {
+                                                        "Ref": "AWS::AccountId"
+                                                    },
+                                                    ":*"
+                                                ]
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": [
+                                        {
+                                            "Fn::Join": [
+                                                "",
+                                                [
+                                                    "arn:aws:logs:us-east-1:",
+                                                    {
+                                                        "Ref": "AWS::AccountId"
+                                                    },
+                                                    ":log-group:/aws/lambda/SSMCopyAll:*"
+                                                ]
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "SSMCopyAllPolicy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Sid": "VisualEditor0",
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "kms:Decrypt",
+                                        "kms:Encrypt"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:kms:*:",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":key/*"
+                                            ]
+                                        ]
+                                    }
+                                },
+                                {
+                                    "Sid": "VisualEditor1",
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ssm:GetParameter",
+                                        "ssm:PutParameter",
+                                        "ssm:DescribeParameters"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "3d35b12a-ac3a-4329-aed1-6aaf56e5795c"
+                }
+            }
+        }
+    }
+}
