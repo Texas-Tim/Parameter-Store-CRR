@@ -476,11 +476,11 @@
                 "Description": "Captures any create, update or delete event in the parameter store",
                 "EventBusName": "default",
                 "EventPattern": {
-                    "source": [
-                        "aws.ssm"
-                    ],
                     "detail-type": [
                         "Parameter Store Change"
+                    ]
+                    "source": [
+                        "aws.ssm"
                     ]
                 },
                 "Name": {
@@ -503,11 +503,7 @@
                                 "Arn"
                             ]
                         },
-                        "Id": "Id1234",
-                        "RetryPolicy": {
-                            "MaximumRetryAttempts": 4,
-                            "MaximumEventAgeInSeconds": 400
-                        }
+                        "Id": "SSMCRRQueue"
                     }
                 ]
             },

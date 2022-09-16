@@ -21,6 +21,11 @@ Simple demo showing how to replicate parameter store items across regions for DR
 **Costs**: There are likely no costs associated with this demo. These services fall within the free tier in a standard account.
 
 
+# Instructions
+
+Simply download and run the CFT in the same region as your existing parameter store. Specify the destination region and the KMS key for any encrypted values. Note that this template creates permissions to a Lambda granting access to all KMS keys in your account. Consider editing the created roles for least privilege
+
+
 # CFT Parameters
 
 **DestinationRegion**: Target region should be where you want to copy your parameter store to
@@ -40,6 +45,5 @@ Any Update or Create event in the Systems Manager Parameter Store, event must be
 
 # Potential Bugs that I probably won't be fixing
 
-1. Deleting the stack does not delete the parameters in the target region
+1. Deleting the stack does not delete the parameters in the target region, in fact it will invoke the copyAll function again
 2. When syncing the initial parameters to the new region, it does not sync the values of those parameters. It simply copies over the parameter if it does not yet exist (checking the parameter name)
-3.
