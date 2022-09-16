@@ -45,7 +45,7 @@
                 },
                 "position": {
                     "x": 60,
-                    "y": -30
+                    "y": -50
                 },
                 "z": 1,
                 "embeds": []
@@ -57,7 +57,7 @@
                 },
                 "position": {
                     "x": 180,
-                    "y": -30
+                    "y": -50
                 },
                 "z": 1,
                 "embeds": []
@@ -105,10 +105,25 @@
                 },
                 "position": {
                     "x": 270,
-                    "y": 40
+                    "y": 30
                 },
                 "z": 1,
                 "embeds": []
+            },
+            "7ffefc92-cf05-4ec3-be6b-db24796e2c41": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "87812940-09e2-4371-9f1a-3b21ab87613a"
+                ]
             }
         }
     },
@@ -271,7 +286,11 @@
                                             "Fn::Join": [
                                                 "",
                                                 [
-                                                    "arn:aws:logs:us-east-1:",
+                                                    "arn:aws:logs:",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    ":",
                                                     {
                                                         "Ref": "AWS::AccountId"
                                                     },
@@ -292,7 +311,11 @@
                                             "Fn::Join": [
                                                 "",
                                                 [
-                                                    "arn:aws:logs:us-east-1:",
+                                                    "arn:aws:logs:",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    ":",
                                                     {
                                                         "Ref": "AWS::AccountId"
                                                     },
@@ -390,7 +413,11 @@
                                             "Fn::Join": [
                                                 "",
                                                 [
-                                                    "arn:aws:logs:us-east-1:",
+                                                    "arn:aws:logs:",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    ":",
                                                     {
                                                         "Ref": "AWS::AccountId"
                                                     },
@@ -411,7 +438,11 @@
                                             "Fn::Join": [
                                                 "",
                                                 [
-                                                    "arn:aws:logs:us-east-1:",
+                                                    "arn:aws:logs:",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    ":",
                                                     {
                                                         "Ref": "AWS::AccountId"
                                                     },
@@ -478,7 +509,7 @@
                 "EventPattern": {
                     "detail-type": [
                         "Parameter Store Change"
-                    ]
+                    ],
                     "source": [
                         "aws.ssm"
                     ]
@@ -535,6 +566,49 @@
             "Metadata": {
                 "AWS::CloudFormation::Designer": {
                     "id": "87812940-09e2-4371-9f1a-3b21ab87613a"
+                }
+            }
+        },
+        "SQSQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+                "Queues": [
+                    {
+                        "Ref": "SQSQueue"
+                    }
+                ],
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Sid": "AWSEvents_testStack_Idf9253d6d-54d5-4340-9c9c-24e823e62769",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "events.amazonaws.com"
+                            },
+                            "Action": "sqs:SendMessage",
+                            "Resource": {
+                                "Fn::GetAtt": [
+                                    "SQSQueue",
+                                    "Arn"
+                                ]
+                            },
+                            "Condition": {
+                                "ArnEquals": {
+                                    "aws:SourceArn": {
+                                        "Fn::GetAtt": [
+                                            "ParameterStoreEvent",
+                                            "Arn"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "7ffefc92-cf05-4ec3-be6b-db24796e2c41"
                 }
             }
         }
